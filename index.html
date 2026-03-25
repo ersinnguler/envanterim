@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Cemile Envanter Sistemi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-50 flex">
+
+    <div class="w-64 h-screen bg-slate-900 text-white p-6 fixed">
+        <h2 class="text-xl font-bold mb-8 text-blue-400 border-b border-slate-700 pb-4">Stok Takip v1</h2>
+        <button onclick="renderTable()" class="w-full text-left py-2 px-4 mb-2 hover:bg-slate-800 rounded">
+            <i class="fas fa-home mr-2"></i> Dashboard
+        </button>
+    </div>
+
+    <div class="ml-64 p-10 w-full">
+        <div class="flex justify-between items-center mb-10">
+            <h1 class="text-3xl font-extrabold text-slate-800">Depo Yönetimi</h1>
+            <button onclick="document.getElementById('modal').style.display='flex'" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 shadow-lg">
+                <i class="fas fa-plus mr-2"></i>Yeni Ürün Ekle
+            </button>
+        </div>
+
+        <div id="stats" class="grid grid-cols-3 gap-6 mb-10">
+            </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+            <table class="w-full text-left">
+                <thead class="bg-gray-100 border-b">
+                    <tr>
+                        <th class="p-4 font-semibold text-gray-600">Ürün Adı</th>
+                        <th class="p-4 font-semibold text-gray-600 text-center">Miktar</th>
+                        <th class="p-4 font-semibold text-gray-600">Birim Fiyat</th>
+                        <th class="p-4 font-semibold text-gray-600">Toplam</th>
+                        <th class="p-4 text-right">İşlem</th>
+                    </tr>
+                </thead>
+                <tbody id="inventory-body" class="divide-y">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl w-96">
+            <h3 class="text-xl font-bold mb-4 text-slate-800 border-b pb-2">Yeni Kayıt</h3>
+            <div class="space-y-4">
+                <input type="text" id="name" placeholder="Ürün Adı" class="w-full border p-3 rounded-lg outline-blue-500">
+                <input type="number" id="qty" placeholder="Adet" class="w-full border p-3 rounded-lg outline-blue-500">
+                <input type="number" id="price" placeholder="Birim Fiyat (₺)" class="w-full border p-3 rounded-lg outline-blue-500">
+            </div>
+            <div class="flex mt-6 space-x-3">
+                <button onclick="saveProduct()" class="flex-1 bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700">Kaydet</button>
+                <button onclick="document.getElementById('modal').style.display='none'" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-bold">Kapat</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Verileri hafızadan al veya boş liste oluştur
+        let data = JSON.parse(localStorage.getItem('depo_verisi')) || [];
+
+        function saveProduct() {
+            const name = document.getElementById('name').value;
+            const qty = Number(document.getElementById('qty').value);
+            const price = Number(document.getElementById('price').value);
+
+            if(!name || qty <= 0 || price <= 0) {
+                alert("Lütfen tüm alanları geçerli değerlerle doldur!");
+                return;
+            }
+
+            data.push({ id: Date.now(), name, qty, price });
+            localStorage.setItem('depo_verisi', JSON.stringify(data));
+            
+            document.getElementById('modal').style.display = 'none'; // Pencereyi kapat
+            document.querySelectorAll('input').forEach(i => i.value = ""); // Formu temizle
+            renderTable();
+        }
+
+        function deleteProduct(id) {
+            data = data.filter(item => item.id !== id);
+            localStorage.setItem('depo_verisi', JSON.stringify(data));
+            renderTable();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('inventory-body');
+            const stats = document.getElementById('stats');
+            tbody.innerHTML = "";
+            
+            let totalVal = 0;
+            let lowItems = 0;
+
+            data.forEach(item => {
+                const total = item.qty * item.price;
+                totalVal += total;
+                if(item.qty < 5) lowItems++;
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="p-4 font-medium text-slate-700">${item.name}</td>
+                        <td class="p-4 text-center">
+                            <span class="px-3 py-1 rounded-full text-xs font-bold ${item.qty < 5 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}">
+                                ${item.qty}
+                            </span>
+                        </td>
+                        <td class="p-4 text-slate-600">₺${item.price.toLocaleString('tr-TR')}</td>
+                        <td class="p-4 font-bold text-blue-600">₺${total.toLocaleString('tr-TR')}</td>
+                        <td class="p-4 text-right">
+                            <button onclick="deleteProduct(${item.id})" class="text-red-400 hover:text-red-600"><i class="fas fa-trash-alt"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            stats.innerHTML = `
+                <div class="bg-white p-6 rounded-xl shadow-sm border">
+                    <p class="text-gray-400 text-xs font-bold uppercase">Toplam Çeşit</p>
+                    <p class="text-2xl font-black text-slate-800">${data.length}</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border">
+                    <p class="text-gray-400 text-xs font-bold uppercase">Kritik Stok</p>
+                    <p class="text-2xl font-black text-orange-600">${lowItems}</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border">
+                    <p class="text-gray-400 text-xs font-bold uppercase">Depo Değeri</p>
+                    <p class="text-2xl font-black text-green-600">₺${totalVal.toLocaleString('tr-TR')}</p>
+                </div>
+            `;
+        }
+
+        // Sayfa açıldığında tabloyu getir
+        renderTable();
+    </script>
+</body>
+</html>
